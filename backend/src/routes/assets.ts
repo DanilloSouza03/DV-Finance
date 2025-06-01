@@ -25,6 +25,10 @@ export default async function assetRoutes(app: FastifyInstance) {
         return reply.status(400).send({ error: "Cliente não encontrado."})
       }
 
+      if (!validationClient.active) {
+        return reply.status(403).send({ erro: "Cliente está inativo, caso queira prosseguir terá que ativar."})
+      }
+
       const asset = await prisma.asset.create({
         data: {
           name,
@@ -60,6 +64,14 @@ export default async function assetRoutes(app: FastifyInstance) {
     const { id } = validation.data
 
     try {
+      const client = await prisma.client.findUnique({
+        where: { id }
+      })
+
+      if (!client) {
+        return reply.status(404).send({ error: "Cliente não encontrado." })
+      }
+
       const assets = await prisma.asset.findMany({
         where: {
           clientId: id
@@ -71,5 +83,4 @@ export default async function assetRoutes(app: FastifyInstance) {
       return reply.status(500).send({ error: "Erro ao buscar ativos" })
     }
   })
-  
 }
