@@ -9,6 +9,12 @@ export default async function clientRoutes(app:FastifyInstance) {
     active: z.boolean()
   })
 
+  const ClientUpdateSchema = z.object({
+    name: z.string().min(1).optional(),
+    email: z.string().email().optional(),
+    active: z.boolean().optional()
+  }).strict()
+
   app.post('/', async (request, reply) => { // Criar o cliente
     const validation = ClientSchema.safeParse(request.body)
 
@@ -30,5 +36,37 @@ export default async function clientRoutes(app:FastifyInstance) {
   app.get('/list', async (_, reply) => { // Listar clientes
     const clients = await prisma.client.findMany()
     return reply.send(clients)
+  })
+
+  app.put('/edit/:id', async (request, reply) => {
+    const paramsSchema = z.object({
+      id: z.coerce.number().int().positive()
+    })
+    const idValidation = paramsSchema.safeParse(request.params)
+    const bodyValidation = ClientUpdateSchema.safeParse(request.body)
+
+    if (!idValidation || !bodyValidation) {
+      return reply.status(400).send({
+        erro: 'ID ou dados inválidos!',
+        details: {
+          params: idValidation.error,
+          body: bodyValidation.error
+        }
+      })
+    }
+
+    const { id } = idValidation.data!
+    const bodyData = bodyValidation.data!
+
+    try {
+      const updateClient = await prisma.client.update({
+        where: { id },
+        data: bodyData
+      })    
+      
+      return reply.send(updateClient)
+    } catch (error) {
+      return reply.status(400).send({ error: "Erro ao editar cliente."})
+    }
   })
 }
