@@ -13,4 +13,13 @@ model Client {
   name   String
   email  String  @unique
   active Boolean @default(true)
+  assets Asset[] 
+}
+
+model Asset {
+  id        Int     @id @default(autoincrement())
+  name      String
+  value     Float
+  clientId  Int
+  client    Client  @relation(fields: [clientId], references: [id])
 }

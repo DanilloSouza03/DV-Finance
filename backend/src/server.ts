@@ -1,11 +1,14 @@
 import fastify from "fastify"
 import { PrismaClient } from "@prisma/client"
 import clientRoutes from "./routes/clients"
+import assetRoutes from "./routes/assets"
 
 export const prisma = new PrismaClient()
 const app = fastify({ logger: true }) // Dev
 
 app.register(clientRoutes, {prefix: "/clients"})
+
+app.register(assetRoutes, {prefix: "/assets"})
 
 app.listen({port: 3000, host: "0.0.0.0"}, (err, address) => {
   if (err) {
