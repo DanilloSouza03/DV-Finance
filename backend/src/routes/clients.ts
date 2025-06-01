@@ -69,4 +69,29 @@ export default async function clientRoutes(app:FastifyInstance) {
       return reply.status(400).send({ error: "Erro ao editar cliente."})
     }
   })
+
+  app.delete('/delete/:id', async (request, reply) => { //Apagar Cliente
+    const paramsSchema = z.object({
+      id: z.coerce.number().int().positive()
+    })
+    
+    const validation = paramsSchema.safeParse(request.params)
+
+    if (!validation) {
+      return reply.status(400).send({ erro: "Erro ao apagar o cliente." })
+    }
+
+    const { id } = validation.data!
+
+    try {
+      await prisma.client.delete({
+        where: { id }
+      })
+
+      return reply.status(204).send()
+    } catch (error) {
+      return reply.status(404).send({error: "Cliente não encontrado"})
+    }
+  })
+
 }
