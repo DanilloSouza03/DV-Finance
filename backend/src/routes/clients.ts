@@ -2,16 +2,26 @@ import { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { prisma } from "../server"
 
+function capitalizeName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .split(' ')
+    .filter(word => word.length > 0)
+    .map(word => word[0].toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 export default async function clientRoutes(app:FastifyInstance) {
   const ClientSchema = z.object({
-    name: z.string().min(1),
-    email: z.string().email(),
+    name: z.string().min(3).transform(capitalizeName),
+    email: z.string().email().transform(str => str.trim().toLowerCase()),
     active: z.boolean()
   })
 
   const ClientUpdateSchema = z.object({
-    name: z.string().min(1).optional(),
-    email: z.string().email().optional(),
+    name: z.string().min(3).transform(capitalizeName).optional(),
+    email: z.string().email().transform(str => str.trim().toLowerCase()).optional(),
     active: z.boolean().optional()
   }).strict()
 
@@ -38,14 +48,14 @@ export default async function clientRoutes(app:FastifyInstance) {
     return reply.send(clients)
   })
 
-  app.put('/edit/:id', async (request, reply) => {
+  app.put('/edit/:id', async (request, reply) => { // Editar clientes
     const paramsSchema = z.object({
       id: z.coerce.number().int().positive()
     })
     const idValidation = paramsSchema.safeParse(request.params)
     const bodyValidation = ClientUpdateSchema.safeParse(request.body)
 
-    if (!idValidation || !bodyValidation) {
+    if (!idValidation.success || !bodyValidation.success) {
       return reply.status(400).send({
         erro: 'ID ou dados inválidos!',
         details: {
