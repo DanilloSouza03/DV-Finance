@@ -2,9 +2,14 @@ import fastify from "fastify"
 import { PrismaClient } from "@prisma/client"
 import clientRoutes from "./routes/clients"
 import assetRoutes from "./routes/assets"
+import cors from "@fastify/cors"
 
 export const prisma = new PrismaClient()
 const app = fastify({ logger: true }) // Dev
+
+app.register(cors, {
+  origin: 'http://localhost:3001', 
+});
 
 app.register(clientRoutes, {prefix: "/clients"})
 
