@@ -84,6 +84,35 @@ export default async function assetRoutes(app: FastifyInstance) {
     }
   })
 
+  app.delete('/delete/:id', async (request, reply) => {
+    const schema = z.object({
+      id: z.coerce.number().int().positive()
+    })
+
+    const validation = schema.safeParse(request.params)
+
+    if (!validation.success){
+      return reply.status(400).send(validation.error)
+    }
+
+    const { id } = validation.data
+
+    try {
+      const asset = await prisma.asset.findUnique({ where: {id} })
+
+      if (!asset) {
+        return reply.status(404).send({ error: "Ativo não encontrado." })
+      }
+
+      await prisma.asset.delete({where: {id }})
+
+      return reply.status(204).send()
+
+    } catch (error) {
+      return reply.status(500).send({ error: "Erro ao deletar ativo." })
+    }
+  })
+
   app.get('/catalog', async (_, reply) => { // Rota para trazer ativos mocados com valores fixos
     const assetsFix = [
         { name: "PETR4", tipo: "ação", value: 39.50 },
