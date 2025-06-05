@@ -35,6 +35,11 @@ const addAssetFormSchema = z.object({
 
 type AddAssetFormValues = z.infer<typeof addAssetFormSchema>;
 
+const formatterForReal = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+});
+
 export default function AssetsPage() {
   const queryClient = useQueryClient();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null); 
@@ -176,7 +181,7 @@ export default function AssetsPage() {
           {assetsToDisplay?.map((asset) => (
             <TableRow key={asset.id}>
               <TableCell>{asset.name}</TableCell>
-              <TableCell>{asset.value.toFixed(2)}</TableCell>
+              <TableCell>{formatterForReal.format(asset.value)}</TableCell>
               <TableCell>{asset.clientId ? (clients?.find(c => c.id === asset.clientId)?.name || 'Cliente Desconhecido') : 'Ativo Fixo'}</TableCell>
               <TableCell className="text-right">
                  <Button variant="ghost" size="sm" onClick={() => handleDeleteAsset(asset.id)}>Apagar</Button>

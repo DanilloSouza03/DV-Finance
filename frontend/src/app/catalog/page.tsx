@@ -13,6 +13,11 @@ export default function AssetsCatalogPage() {
   if (isLoading) return <div>Carregando catálogo de ativos...</div>;
   if (error) return <div>Ocorreu um erro ao carregar o catálogo: {(error as Error).message}</div>;
 
+const formatterForReal = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+});
+
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">Catálogo de Ativos</h1>
@@ -30,7 +35,7 @@ export default function AssetsCatalogPage() {
             <TableRow key={index}>
               <TableCell>{asset.name}</TableCell>
               <TableCell>{asset.tipo}</TableCell>
-              <TableCell>{asset.value.toFixed(2)}</TableCell>
+              <TableCell>{formatterForReal.format(asset.value)}</TableCell>
             </TableRow>
           ))}
         </TableBody>
