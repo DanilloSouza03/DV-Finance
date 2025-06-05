@@ -50,7 +50,7 @@ export default async function clientRoutes(app:FastifyInstance) {
 
   app.put('/edit/:id', async (request, reply) => { // Editar clientes
     const paramsSchema = z.object({
-      id: z.coerce.number().int().positive()
+      id: z.string().uuid() 
     })
     const idValidation = paramsSchema.safeParse(request.params)
     const bodyValidation = ClientUpdateSchema.safeParse(request.body)
@@ -82,18 +82,23 @@ export default async function clientRoutes(app:FastifyInstance) {
 
   app.delete('/delete/:id', async (request, reply) => { //Apagar Cliente
     const paramsSchema = z.object({
-      id: z.coerce.number().int().positive()
+      id: z.string().uuid() 
     })
     
     const validation = paramsSchema.safeParse(request.params)
 
-    if (!validation) {
-      return reply.status(400).send({ erro: "Erro ao apagar o cliente." })
+    if (!validation.success) {
+      return reply.status(400).send({ erro: "ID do cliente inválido." })
     }
 
     const { id } = validation.data!
 
     try {
+      const client = await prisma.client.findUnique({ where: { id } });
+      if (!client) {
+        return reply.status(404).send({ error: "Cliente não encontrado" });
+      }
+
       await prisma.client.delete({
         where: { id }
       })

@@ -6,7 +6,7 @@ export default async function assetRoutes(app: FastifyInstance) {
   const AssetSchema = z.object({
     name: z.enum(["PETR4", "VALE3", "ITUB4", "Tesouro IPCA+ 2035", "Tesouro Selic 2027", "CDB Banco Inter (1 ano)", "LCI Caixa (2 anos)", "USD/BRL", "EUR/BRL", "Bitcoin", "Ethereum", "Ouro (g)", "Soja (saca 60kg)", "Milho (saca 60kg)", "Café Arábica (saca 60kg)"]),
     value: z.number(),
-    clientId: z.number().int().positive()
+    clientId: z.string().uuid() 
   })
   
 
@@ -54,7 +54,7 @@ export default async function assetRoutes(app: FastifyInstance) {
   })
   
   app.get('/cliente/:id', async (request, reply) => { // Listar ativos de cada cliente
-    const schema = z.object({ id: z.coerce.number().int().positive() })
+    const schema = z.object({ id: z.string().uuid() }) 
     const validation = schema.safeParse(request.params)
     
     if (!validation.success) {
@@ -86,7 +86,7 @@ export default async function assetRoutes(app: FastifyInstance) {
 
   app.delete('/delete/:id', async (request, reply) => {
     const schema = z.object({
-      id: z.coerce.number().int().positive()
+      id: z.string().uuid() 
     })
 
     const validation = schema.safeParse(request.params)

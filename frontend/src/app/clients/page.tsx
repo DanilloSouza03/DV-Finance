@@ -109,7 +109,7 @@ export default function ClientsPage() {
     }
   };
 
-  const handleDelete = (clientId: Number) => {
+  const handleDelete = (clientId: string) => { 
     if (confirm("Tem certeza que deseja apagar este cliente?")) {
       deleteMutation.mutate(clientId);
     }

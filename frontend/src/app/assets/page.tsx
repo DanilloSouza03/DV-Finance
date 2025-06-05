@@ -30,19 +30,16 @@ const addAssetFormSchema = z.object({
     (val) => Number(val),
     z.number({ invalid_type_error: "Valor deve ser um número." }).positive({ message: "Valor deve ser um número positivo." })
   ),
-  clientId: z.preprocess(
-    (val) => Number(val),
-    z.number({ invalid_type_error: "Selecione um cliente." }).positive({ message: "Selecione um cliente válido." })
-  ),
+  clientId: z.string().uuid({ message: "Selecione um cliente válido." }), 
 });
 
 type AddAssetFormValues = z.infer<typeof addAssetFormSchema>;
 
 export default function AssetsPage() {
   const queryClient = useQueryClient();
-  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null); 
   const [isAddAssetDialogOpen, setIsAddAssetDialogOpen] = useState(false);
-  const [addAssetError, setAddAssetError] = useState<string | null>(null); 
+  const [addAssetError, setAddAssetError] = useState<string | null>(null);
 
   const { data: allAssets, isLoading: isLoadingAll, error: errorAll } = useQuery<Asset[]>({
     queryKey: ['assets', 'all'],
@@ -67,9 +64,9 @@ export default function AssetsPage() {
       queryClient.invalidateQueries({ queryKey: ['assets'] });
       setIsAddAssetDialogOpen(false);
       addAssetForm.reset();
-      setAddAssetError(null); 
+      setAddAssetError(null);
     },
-    onError: (err: AxiosError<{ erro: string }>) => { 
+    onError: (err: AxiosError<{ erro: string }>) => {
       console.error("Erro ao criar ativo:", err);
       if (err.response && err.response.data && err.response.data.erro) {
         if (err.response.data.erro === "Cliente está inativo, caso queira prosseguir terá que ativar.") {
@@ -128,7 +125,7 @@ export default function AssetsPage() {
     createAssetMutation.mutate(values as CreateAssetPayload);
   };
 
-  const handleDeleteAsset = (assetId: number) => {
+  const handleDeleteAsset = (assetId: string) => { 
     if (confirm("Tem certeza que deseja apagar este ativo?")) {
       deleteAssetMutation.mutate(assetId);
     }
@@ -150,14 +147,14 @@ export default function AssetsPage() {
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center space-x-2">
           <label htmlFor="client-filter" className="text-sm font-medium">Filtrar por Cliente:</label>
-          <Select onValueChange={(value) => setSelectedClientId(value === 'all' ? null : Number(value))} value={selectedClientId === null ? 'all' : String(selectedClientId)}>
+          <Select onValueChange={(value) => setSelectedClientId(value === 'all' ? null : value)} value={selectedClientId === null ? 'all' : selectedClientId}>
             <SelectTrigger id="client-filter" className="w-[180px]">
               <SelectValue placeholder="Todos os Ativos" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os Ativos</SelectItem>
                {clients?.map(client => (
-                 <SelectItem key={client.id} value={String(client.id)}>{client.name}</SelectItem>
+                 <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem> 
                ))}
             </SelectContent>
           </Select>
@@ -237,7 +234,7 @@ export default function AssetsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Cliente</FormLabel>
-                    <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value === undefined ? '' : String(field.value)}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um cliente" />
@@ -245,7 +242,7 @@ export default function AssetsPage() {
                       </FormControl>
                       <SelectContent>
                         {clients?.map(client => (
-                          <SelectItem key={client.id} value={String(client.id)}>{client.name}</SelectItem>
+                          <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem> 
                         ))}
                       </SelectContent>
                     </Select>

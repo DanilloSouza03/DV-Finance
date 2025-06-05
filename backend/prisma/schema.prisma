@@ -9,7 +9,7 @@ datasource db {
 }
 
 model Client {
-  id     Int     @id @default(autoincrement())
+  id     String  @id @default(uuid())
   name   String
   email  String  @unique
   active Boolean @default(true)
@@ -17,9 +17,9 @@ model Client {
 }
 
 model Asset {
-  id        Int     @id @default(autoincrement())
+  id        String  @id @default(uuid())
   name      String
   value     Float
-  clientId  Int
+  clientId  String
   client    Client  @relation(fields: [clientId], references: [id])
 }

@@ -6,7 +6,7 @@ const api = axios.create({
 });
 
 export interface Client {
-  id: number;
+  id: string; 
   name?: string;
   email?: string;
   active?: boolean;
@@ -32,7 +32,7 @@ export const updateClient = async (clientData: Client): Promise<Client> => {
   return data;
 };
 
-export const deleteClient = async (clientId: Number): Promise<void> => {
+export const deleteClient = async (clientId: string): Promise<void> => { 
   await api.delete(`/clients/delete/${clientId}`);
 };
 

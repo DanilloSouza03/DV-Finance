@@ -6,10 +6,10 @@ const api = axios.create({
 });
 
 export interface Asset {
-  id: number;
+  id: string; 
   name: string;
   value: number;
-  clientId?: number;
+  clientId?: string; 
 }
 
 export interface CatalogAsset {
@@ -21,7 +21,7 @@ export interface CatalogAsset {
 export type CreateAssetPayload = {
   name: string;
   value: number;
-  clientId: number;
+  clientId: string; 
 };
 
 export const fetchAllAssets = async (): Promise<Asset[]> => {
@@ -29,7 +29,7 @@ export const fetchAllAssets = async (): Promise<Asset[]> => {
   return data;
 };
 
-export const fetchClientAssets = async (clientId: number): Promise<Asset[]> => {
+export const fetchClientAssets = async (clientId: string): Promise<Asset[]> => { 
   const { data } = await api.get(`${API_BASE_URL}/assets/cliente/${clientId}`);
   return data;
 };
@@ -44,6 +44,6 @@ export const createAsset = async (assetData: CreateAssetPayload): Promise<Asset>
   return data;
 };
 
-export const deleteAsset = async (assetId: number): Promise<void> => {
+export const deleteAsset = async (assetId: string): Promise<void> => {
   await api.delete(`${API_BASE_URL}/assets/delete/${assetId}`);
 };
