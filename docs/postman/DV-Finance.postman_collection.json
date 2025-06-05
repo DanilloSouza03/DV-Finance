@@ -1,0 +1,149 @@
+{
+	"info": {
+		"_postman_id": "2c80758a-2a74-4121-897e-be92727d56e1",
+		"name": "DV-Finance",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "39863100"
+	},
+	"item": [
+		{
+			"name": "📁 Clients",
+			"item": [
+				{
+					"name": "🆕 Criar Cliente",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Cliente Fulano\",\n  \"email\": \"clientefulano@example.com\",\n  \"active\": true\n}",
+							"options": {
+								"raw": { "language": "json" }
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}/clients",
+							"host": ["{{baseURL}}"],
+							"path": ["clients"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "📄 Listar Clientes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/clients/list",
+							"host": ["{{baseURL}}"],
+							"path": ["clients", "list"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "❌ Deletar Cliente",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/clients/delete/{{clientId}}",
+							"host": ["{{baseURL}}"],
+							"path": ["clients", "delete", "{{clientId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "✏️ Editar Cliente",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Novo Nome Cliente\"\n}",
+							"options": {
+								"raw": { "language": "json" }
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}/clients/edit/{{clientId}}",
+							"host": ["{{baseURL}}"],
+							"path": ["clients", "edit", "{{clientId}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📁 Assets",
+			"item": [
+				{
+					"name": "📄 Listar Todos os Ativos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/assets",
+							"host": ["{{baseURL}}"],
+							"path": ["assets"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "📄 Listar Ativos por Cliente",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/assets/{{clientId}}",
+							"host": ["{{baseURL}}"],
+							"path": ["assets", "{{clientId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "🆕 Criar Ativo",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Ethereum\",\n  \"value\": 522.50,\n  \"clientId\": \"{{clientId}}\"\n}",
+							"options": {
+								"raw": { "language": "json" }
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}/assets",
+							"host": ["{{baseURL}}"],
+							"path": ["assets"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "📦 Listar Catálogo de Ativos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/assets/catalog",
+							"host": ["{{baseURL}}"],
+							"path": ["assets", "catalog"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{ "key": "baseURL", "value": "http://localhost:8000" },
+		{ "key": "clientId", "value": "uuid-cliente-exemplo" }
+	]
+}
