@@ -1,32 +1,36 @@
 import { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { prisma } from "../server"
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library"
 
 export default async function assetRoutes(app: FastifyInstance) {
   const AssetSchema = z.object({
-    name: z.enum(["PETR4", "VALE3", "ITUB4", "Tesouro IPCA+ 2035", "Tesouro Selic 2027", "CDB Banco Inter (1 ano)", "LCI Caixa (2 anos)", "USD/BRL", "EUR/BRL", "Bitcoin", "Ethereum", "Ouro (g)", "Soja (saca 60kg)", "Milho (saca 60kg)", "Café Arábica (saca 60kg)"]),
-    value: z.number(),
-    clientId: z.string().uuid() 
+    name: z.enum(["PETR4", "VALE3", "ITUB4", "Tesouro IPCA+ 2035", "Tesouro Selic 2027", "CDB Banco Inter (1 ano)", "LCI Caixa (2 anos)", "USD/BRL", "EUR/BRL", "Bitcoin", "Ethereum", "Ouro (g)", "Soja (saca 60kg)", "Milho (saca 60kg)", "Café Arábica (saca 60kg)"], { message: "Nome do ativo inválido." }),
+    value: z.number({ invalid_type_error: "Valor deve ser um número." }).positive({ message: "Valor deve ser um número positivo." }),
+    clientId: z.string().uuid({ message: "ID do cliente inválido." })
   })
-  
 
-  app.post('/', async (request, reply) => { // Criar ativo para cliente
+
+  app.post('/', async (request, reply) => {
     const validation = AssetSchema.safeParse(request.body)
-    
+
     if (!validation.success) {
-      return reply.status(400).send(validation.error)
+      return reply.status(400).send({
+        error: "Dados de entrada inválidos.",
+        details: validation.error.flatten().fieldErrors
+      })
     }
-    
+
     const {name, value, clientId} = validation.data
-    
+
     try {
-      const validationClient = await prisma.client.findUnique({where: {id: clientId}})
-      if (!validationClient) {
-        return reply.status(400).send({ error: "Cliente não encontrado."})
+      const client = await prisma.client.findUnique({where: {id: clientId}})
+      if (!client) {
+        return reply.status(404).send({ error: "Cliente não encontrado."})
       }
-      
-      if (!validationClient.active) {
-        return reply.status(403).send({ erro: "Cliente está inativo, caso queira prosseguir terá que ativar."})
+
+      if (!client.active) {
+        return reply.status(403).send({ error: "Cliente está inativo. Ative-o para adicionar ativos."})
       }
       
       const asset = await prisma.asset.create({
@@ -39,26 +43,35 @@ export default async function assetRoutes(app: FastifyInstance) {
       
       return reply.status(201).send(asset)
     } catch (error) {
-      return reply.status(500).send({error: "Erro ao criar ativo."})
+      app.log.error(error)
+      return reply.status(500).send({error: "Erro interno ao criar ativo."})
     }
   })
-  
-  app.get('/', async (_, reply) => { // Listar todos ativos
-    const assets = await prisma.asset.findMany({
-      include: {
-        client: true
-      }
-    })
-    
-    return reply.status(200).send(assets)
+
+  app.get('/', async (_, reply) => {
+    try {
+      const assets = await prisma.asset.findMany({
+        include: {
+          client: true
+        }
+      })
+
+      return reply.status(200).send(assets)
+    } catch (error) {
+      app.log.error(error)
+      return reply.status(500).send({ error: "Erro interno ao listar ativos." })
+    }
   })
-  
+
   app.get('/cliente/:id', async (request, reply) => { // Listar ativos de cada cliente
-    const schema = z.object({ id: z.string().uuid() }) 
+    const schema = z.object({ id: z.string().uuid({ message: "ID do cliente inválido." }) })
     const validation = schema.safeParse(request.params)
     
     if (!validation.success) {
-      return reply.status(400).send(validation.error)
+      return reply.status(400).send({
+        error: "ID do cliente inválido.",
+        details: validation.error.flatten().fieldErrors
+      })
     }
     
     const { id } = validation.data
@@ -80,19 +93,23 @@ export default async function assetRoutes(app: FastifyInstance) {
        
       return reply.send(assets)
     } catch (error) {
-      return reply.status(500).send({ error: "Erro ao buscar ativos" })
+      app.log.error(error)
+      return reply.status(500).send({ error: "Erro interno ao buscar ativos do cliente." })
     }
   })
 
   app.delete('/delete/:id', async (request, reply) => {
     const schema = z.object({
-      id: z.string().uuid() 
+      id: z.string().uuid({ message: "ID do ativo inválido." })
     })
 
     const validation = schema.safeParse(request.params)
 
     if (!validation.success){
-      return reply.status(400).send(validation.error)
+      return reply.status(400).send({
+        error: "ID do ativo inválido.",
+        details: validation.error.flatten().fieldErrors
+      })
     }
 
     const { id } = validation.data
@@ -109,7 +126,13 @@ export default async function assetRoutes(app: FastifyInstance) {
       return reply.status(204).send()
 
     } catch (error) {
-      return reply.status(500).send({ error: "Erro ao deletar ativo." })
+       if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          return reply.status(404).send({ error: "Ativo não encontrado." })
+        }
+      }
+      app.log.error(error)
+      return reply.status(500).send({ error: "Erro interno ao apagar ativo." })
     }
   })
 

@@ -71,14 +71,10 @@ export default function AssetsPage() {
       addAssetForm.reset();
       setAddAssetError(null);
     },
-    onError: (err: AxiosError<{ erro: string }>) => {
+    onError: (err: AxiosError<{ error: string, details?: any }>) => {
       console.error("Erro ao criar ativo:", err);
-      if (err.response && err.response.data && err.response.data.erro) {
-        if (err.response.data.erro === "Cliente está inativo, caso queira prosseguir terá que ativar.") {
-          setAddAssetError("Este cliente está inativo. Ative-o para adicionar ativos");
-        } else {
-          setAddAssetError(`Erro: ${err.response.data.erro}`);
-        }
+      if (err.response && err.response.data && err.response.data.error) {
+        setAddAssetError(`Erro: ${err.response.data.error}`);
       } else {
         setAddAssetError("Ocorreu um erro ao adicionar o ativo.");
       }
@@ -93,24 +89,29 @@ export default function AssetsPage() {
          queryClient.invalidateQueries({ queryKey: ['assets', 'client', selectedClientId] });
       }
     },
-    onError: (err) => {
+    onError: (err: AxiosError<{ error: string }>) => {
       console.error("Erro ao apagar ativo:", err);
+       if (err.response && err.response.data && err.response.data.error) {
+        alert(`Erro ao apagar ativo: ${err.response.data.error}`);
+      } else {
+        alert("Ocorreu um erro ao apagar o ativo.");
+      }
     }
   });
 
   const addAssetForm = useForm<AddAssetFormValues>({
     resolver: zodResolver(addAssetFormSchema),
     defaultValues: {
-      name: "", 
+      name: undefined, 
       value: 0,
-      clientId: undefined,
+      clientId: undefined, 
     },
   });
 
   const handleOpenAddAssetDialog = () => {
     setIsAddAssetDialogOpen(true);
     setAddAssetError(null); 
-    addAssetForm.reset({ name: "", value: 0, clientId: undefined });
+    addAssetForm.reset({ name: undefined, value: 0, clientId: undefined });
   };
 
   const handleCloseAddAssetDialog = () => {
@@ -120,11 +121,6 @@ export default function AssetsPage() {
   };
 
   const onAddAssetSubmit = (values: AddAssetFormValues) => {
-    if (!values.name) {
-      setAddAssetError("O nome do asset é obrigatório");
-      return;
-    }
-  
     console.log("Submitting values:", values);
     setAddAssetError(null);
     createAssetMutation.mutate(values as CreateAssetPayload);
@@ -152,7 +148,7 @@ export default function AssetsPage() {
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center space-x-2">
           <label htmlFor="client-filter" className="text-sm font-medium">Filtrar por Cliente:</label>
-          <Select onValueChange={(value) => setSelectedClientId(value === 'all' ? null : value)} value={selectedClientId === null ? 'all' : selectedClientId}>
+          <Select onValueChange={(value) => setSelectedClientId(value === 'all' ? null : value)} value={selectedClientId === null ? 'all' : selectedClientId ?? 'all'}>
             <SelectTrigger id="client-filter" className="w-[180px]">
               <SelectValue placeholder="Todos os Ativos" />
             </SelectTrigger>

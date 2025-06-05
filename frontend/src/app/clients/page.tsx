@@ -50,9 +50,13 @@ export default function ClientsPage() {
       form.reset();
       setFormError(null); 
     },
-    onError: (err: AxiosError) => { 
+    onError: (err: AxiosError<{ error: string, details?: any }>) => {
       console.error("Erro ao criar cliente:", err);
-      setFormError("Ocorreu um erro ao cadastrar o cliente! Verifique se este e-mail já não está sendo usado.");
+      if (err.response && err.response.data && err.response.data.error) {
+        setFormError(`Erro: ${err.response.data.error}`);
+      } else {
+        setFormError("Ocorreu um erro ao cadastrar o cliente.");
+      }
     }
   });
 
@@ -65,9 +69,13 @@ export default function ClientsPage() {
       setEditingClient(null);
       setFormError(null); 
     },
-     onError: (err: AxiosError) => { 
+     onError: (err: AxiosError<{ error: string, details?: any }>) => {
       console.error("Erro ao atualizar cliente:", err);
-      setFormError("Ocorreu um erro ao atualizar o cliente.");
+       if (err.response && err.response.data && err.response.data.error) {
+        setFormError(`Erro: ${err.response.data.error}`);
+      } else {
+        setFormError("Ocorreu um erro ao atualizar o cliente.");
+      }
     }
   });
 
@@ -76,8 +84,13 @@ export default function ClientsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
     },
-     onError: (err) => {
+     onError: (err: AxiosError<{ error: string }>) => {
       console.error("Erro ao apagar cliente:", err);
+       if (err.response && err.response.data && err.response.data.error) {
+        alert(`Erro ao apagar cliente: ${err.response.data.error}`);
+      } else {
+        alert("Ocorreu um erro ao apagar o cliente.");
+      }
     }
   });
 
