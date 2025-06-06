@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { AxiosError } from 'axios'; 
 import { fetchClients, createClient, updateClient, deleteClient, Client } from '@/api/clients';
+import { Pencil, Trash2 } from 'lucide-react';
 
 const clientFormSchema = z.object({
   name: z.string().min(3, { message: "Nome deve ter pelo menos 3 caracteres." }),
@@ -132,36 +133,51 @@ export default function ClientsPage() {
   if (error) return <div>Ocorreu um erro ao carregar clientes: {(error as Error).message}</div>;
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Clientes</h1>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-4">Clientes</h1>
       <Button onClick={() => handleOpenDialog()} className="mb-4">Adicionar Cliente</Button>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nome</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Ativo</TableHead>
-            <TableHead className="text-right">Ações</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {clients?.map((client) => (
-            <TableRow key={client.id}>
-              <TableCell>{client.name}</TableCell>
-              <TableCell>{client.email}</TableCell>
-              <TableCell>{client.active ? 'Sim' : 'Não'}</TableCell>
-              <TableCell className="text-right">
-                <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(client)}>Editar</Button>
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(client.id)}>Apagar</Button>
-              </TableCell>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="min-w-[150px]">Nome</TableHead>
+              <TableHead className="min-w-[200px]">Email</TableHead>
+              <TableHead className="min-w-[100px]">Ativo</TableHead>
+              <TableHead className="text-right min-w-[120px]">Ações</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {clients?.map((client) => (
+              <TableRow key={client.id} className="hover:bg-muted/50 transition-colors">
+                <TableCell>{client.name}</TableCell>
+                <TableCell>{client.email}</TableCell>
+                <TableCell>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    client.active
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                      : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full mr-1 ${client.active ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                    {client.active ? 'Ativo' : 'Inativo'}
+                  </span>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(client)} title="Editar">
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(client.id)} title="Apagar">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-[90%] max-w-md sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>{editingClient ? 'Editar Cliente' : 'Adicionar Cliente'}</DialogTitle>
           </DialogHeader>

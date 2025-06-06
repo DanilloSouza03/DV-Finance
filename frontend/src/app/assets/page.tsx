@@ -12,17 +12,22 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { AxiosError } from 'axios'; 
-import { fetchAllAssets, fetchClientAssets, createAsset, deleteAsset, Asset, CreateAssetPayload } from '@/api/assets';
+import { fetchAllAssets, fetchClientAssets, createAsset, deleteAsset, Asset, CreateAssetPayload, fetchCatalogAssets, CatalogAsset } from '@/api/assets';
 import { fetchClientsForFilter, Client } from '@/api/clients';
+import { Trash2, TrendingUp, DollarSign, Bitcoin, Leaf, Banknote, LandPlot } from 'lucide-react';
 
 
-// --- Dados mocados 
-const MOCKED_CATALOG_NAMES = [
-  "PETR4", "VALE3", "ITUB4", "Tesouro IPCA+ 2035", "Tesouro Selic 2027",
-  "CDB Banco Inter (1 ano)", "LCI Caixa (2 anos)", "USD/BRL", "EUR/BRL",
-  "Bitcoin", "Ethereum", "Ouro (g)", "Soja (saca 60kg)", "Milho (saca 60kg)",
-  "Café Arábica (saca 60kg)"
-];
+const getAssetIcon = (type: string) => {
+  switch (type.toLowerCase()) {
+    case 'ação': return <TrendingUp className="h-4 w-4 text-blue-500" />;
+    case 'moeda': return <DollarSign className="h-4 w-4 text-green-500" />;
+    case 'cripto': return <Bitcoin className="h-4 w-4 text-yellow-500" />;
+    case 'commodity': return <Leaf className="h-4 w-4 text-amber-700" />;
+    case 'título privado': return <Banknote className="h-4 w-4 text-purple-500" />;
+    case 'título público': return <LandPlot className="h-4 w-4 text-indigo-500" />;
+    default: return null;
+  }
+};
 
 const addAssetFormSchema = z.object({
   name: z.string().min(1, { message: "Selecione o nome do ativo." }),
@@ -30,7 +35,7 @@ const addAssetFormSchema = z.object({
     (val) => Number(val),
     z.number({ invalid_type_error: "Valor deve ser um número." }).positive({ message: "Valor deve ser um número positivo." })
   ),
-  clientId: z.string().uuid({ message: "Selecione um cliente válido." }), 
+  clientId: z.string().uuid({ message: "Selecione um cliente válido." }),
 });
 
 type AddAssetFormValues = z.infer<typeof addAssetFormSchema>;
@@ -42,7 +47,7 @@ const formatterForReal = new Intl.NumberFormat('pt-BR', {
 
 export default function AssetsPage() {
   const queryClient = useQueryClient();
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null); 
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [isAddAssetDialogOpen, setIsAddAssetDialogOpen] = useState(false);
   const [addAssetError, setAddAssetError] = useState<string | null>(null);
 
@@ -63,6 +68,11 @@ export default function AssetsPage() {
     queryFn: fetchClientsForFilter,
   });
 
+  const { data: catalogAssets, isLoading: isLoadingCatalog, error: errorCatalog } = useQuery<CatalogAsset[]>({
+    queryKey: ['assets-catalog'],
+    queryFn: fetchCatalogAssets,
+  });
+
   const createAssetMutation = useMutation({
     mutationFn: createAsset,
     onSuccess: () => {
@@ -71,13 +81,9 @@ export default function AssetsPage() {
       addAssetForm.reset();
       setAddAssetError(null);
     },
-    onError: (err: AxiosError<{ error: string, details?: any }>) => {
+    onError: (err: AxiosError<{ error: string }>) => {
       console.error("Erro ao criar ativo:", err);
-      if (err.response && err.response.data && err.response.data.error) {
-        setAddAssetError(`Erro: ${err.response.data.error}`);
-      } else {
-        setAddAssetError("Ocorreu um erro ao adicionar o ativo.");
-      }
+      setAddAssetError(err.response?.data?.error || "Erro desconhecido ao criar ativo.");
     }
   });
 
@@ -85,137 +91,150 @@ export default function AssetsPage() {
     mutationFn: deleteAsset,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assets'] });
-      if (selectedClientId !== null) {
-         queryClient.invalidateQueries({ queryKey: ['assets', 'client', selectedClientId] });
+      if (selectedClientId) {
+        queryClient.invalidateQueries({ queryKey: ['assets', 'client', selectedClientId] });
       }
     },
     onError: (err: AxiosError<{ error: string }>) => {
       console.error("Erro ao apagar ativo:", err);
-       if (err.response && err.response.data && err.response.data.error) {
-        alert(`Erro ao apagar ativo: ${err.response.data.error}`);
-      } else {
-        alert("Ocorreu um erro ao apagar o ativo.");
-      }
+      alert(err.response?.data?.error || "Erro desconhecido ao apagar ativo.");
     }
   });
 
   const addAssetForm = useForm<AddAssetFormValues>({
     resolver: zodResolver(addAssetFormSchema),
     defaultValues: {
-      name: undefined, 
+      name: undefined,
       value: 0,
-      clientId: undefined, 
+      clientId: undefined,
     },
   });
 
   const handleOpenAddAssetDialog = () => {
     setIsAddAssetDialogOpen(true);
-    setAddAssetError(null); 
+    setAddAssetError(null);
     addAssetForm.reset({ name: undefined, value: 0, clientId: undefined });
   };
 
   const handleCloseAddAssetDialog = () => {
     setIsAddAssetDialogOpen(false);
-    setAddAssetError(null); 
+    setAddAssetError(null);
     addAssetForm.reset();
   };
 
   const onAddAssetSubmit = (values: AddAssetFormValues) => {
-    console.log("Submitting values:", values);
     setAddAssetError(null);
     createAssetMutation.mutate(values as CreateAssetPayload);
   };
 
-  const handleDeleteAsset = (assetId: string) => { 
-    if (confirm("Tem certeza que deseja apagar este ativo?")) {
-      deleteAssetMutation.mutate(assetId);
+  const handleDeleteAsset = (id: string) => {
+    if (confirm("Deseja mesmo apagar este ativo?")) {
+      deleteAssetMutation.mutate(id);
     }
   };
 
-  const assetsToDisplay = selectedClientId !== null ? clientAssets : allAssets;
-  const isLoading = selectedClientId !== null ? isLoadingClient : isLoadingAll;
-  const error = selectedClientId !== null ? errorClient : errorAll;
+  const assetsToDisplay = selectedClientId ? clientAssets : allAssets;
+  const isLoading = selectedClientId ? isLoadingClient : isLoadingAll;
+  const error = selectedClientId ? errorClient : errorAll;
 
-  if (isLoadingClients) return <div>Carregando clientes para filtro...</div>;
-  if (errorClients) return <div>Erro ao carregar clientes para filtro: {(errorClients as Error).message}</div>;
+  if (isLoadingClients || isLoadingCatalog) return <div>Carregando dados...</div>;
+  if (errorClients) return <div>Erro ao carregar clientes: {(errorClients as Error).message}</div>;
+  if (errorCatalog) return <div>Erro ao carregar catálogo: {(errorCatalog as Error).message}</div>;
   if (isLoading) return <div>Carregando ativos...</div>;
-  if (error) return <div>Ocorreu um erro ao carregar ativos: {(error as Error).message}</div>;
+  if (error) return <div>Erro ao carregar ativos: {(error as Error).message}</div>;
+
+  const assetTypeMap = new Map<string, string>();
+  catalogAssets?.forEach(a => assetTypeMap.set(a.name, a.tipo));
 
   return (
-    <div>
+    <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold mb-4">Ativos</h1>
 
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center space-x-2">
-          <label htmlFor="client-filter" className="text-sm font-medium">Filtrar por Cliente:</label>
-          <Select onValueChange={(value) => setSelectedClientId(value === 'all' ? null : value)} value={selectedClientId === null ? 'all' : selectedClientId ?? 'all'}>
-            <SelectTrigger id="client-filter" className="w-[180px]">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 space-y-4 sm:space-y-0">
+        <div className="flex items-center space-x-2 w-full sm:w-auto">
+          <label htmlFor="client-filter" className="text-sm font-medium shrink-0">Filtrar por Cliente:</label>
+          <Select
+            onValueChange={(value) => setSelectedClientId(value === 'all' ? null : value)}
+            value={selectedClientId ?? 'all'}
+          >
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Todos os Ativos" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os Ativos</SelectItem>
-               {clients?.map(client => (
-                 <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem> 
-               ))}
+              {clients?.map(client => (
+                <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <Button onClick={handleOpenAddAssetDialog}>Adicionar Ativo</Button>
       </div>
 
-
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nome</TableHead>
-            <TableHead>Valor</TableHead>
-            <TableHead>Cliente</TableHead>
-            <TableHead className="text-right">Ações</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {assetsToDisplay?.map((asset) => (
-            <TableRow key={asset.id}>
-              <TableCell>{asset.name}</TableCell>
-              <TableCell>{formatterForReal.format(asset.value)}</TableCell>
-              <TableCell>{asset.clientId ? (clients?.find(c => c.id === asset.clientId)?.name || 'Cliente Desconhecido') : 'Ativo Fixo'}</TableCell>
-              <TableCell className="text-right">
-                 <Button variant="ghost" size="sm" onClick={() => handleDeleteAsset(asset.id)}>Apagar</Button>
-              </TableCell>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>Valor</TableHead>
+              <TableHead>Cliente</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {assetsToDisplay?.map((asset) => {
+              const icon = getAssetIcon(assetTypeMap.get(asset.name) ?? 'desconhecido');
+              const clientName = clients?.find(c => c.id === asset.clientId)?.name ?? 'Ativo Fixo';
+              return (
+                <TableRow key={asset.id}>
+                  <TableCell className="flex items-center gap-2">
+                    {asset.name} {icon}
+                  </TableCell>
+                  <TableCell>{formatterForReal.format(asset.value)}</TableCell>
+                  <TableCell>{clientName}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteAsset(asset.id)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
 
       <Dialog open={isAddAssetDialogOpen} onOpenChange={setIsAddAssetDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Adicionar Novo Ativo</DialogTitle>
+            <DialogTitle>Adicionar Ativo</DialogTitle>
           </DialogHeader>
+
           <Form {...addAssetForm}>
-            <form onSubmit={addAssetForm.handleSubmit(onAddAssetSubmit)} className="grid gap-4 py-4">
+            <form onSubmit={addAssetForm.handleSubmit(onAddAssetSubmit)} className="space-y-4">
               <FormField
                 control={addAssetForm.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome do Ativo</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
+                    <FormLabel>Nome</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um ativo" />
                         </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {MOCKED_CATALOG_NAMES.map((name) => (
-                          <SelectItem key={name} value={name}>{name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                        <SelectContent>
+                          {catalogAssets?.map(a => (
+                            <SelectItem key={a.name} value={a.name}>{a.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={addAssetForm.control}
                 name="value"
@@ -223,42 +242,43 @@ export default function AssetsPage() {
                   <FormItem>
                     <FormLabel>Valor</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" {...field} onChange={event => field.onChange(event.target.valueAsNumber)} />
+                      <Input type="number" step="0.01" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-               <FormField
+
+              <FormField
                 control={addAssetForm.control}
                 name="clientId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Cliente</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
+                    <FormControl>
+                      <Select onValueChange={field.onChange}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um cliente" />
                         </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {clients?.map(client => (
-                          <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem> 
-                        ))}
-                      </SelectContent>
-                    </Select>
+                        <SelectContent>
+                          {clients?.map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
               {addAssetError && (
-                <div className="text-sm font-medium text-destructive">{addAssetError}</div>
+                <p className="text-sm text-red-600">{addAssetError}</p>
               )}
+
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={handleCloseAddAssetDialog}>Cancelar</Button>
-                <Button type="submit" disabled={addAssetForm.formState.isSubmitting || createAssetMutation.isPending}>
-                  Adicionar Ativo
-                </Button>
+                <Button variant="outline" onClick={handleCloseAddAssetDialog}>Cancelar</Button>
+                <Button type="submit">Adicionar</Button>
               </DialogFooter>
             </form>
           </Form>
